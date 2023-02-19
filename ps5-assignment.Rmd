@@ -1,0 +1,82 @@
+---
+title: "ps5-assignment"
+author: "Rosemary Randall"
+date: "`r Sys.Date()`"
+output: html_document
+---
+## Loading and checking the data
+```{r echo=FALSE}
+library("tidyverse")
+gaps <- read_delim("gapminder.csv.bz2")
+
+row <- nrow(gaps)
+col <- ncol(gaps)
+```
+There are `r row` rows in this dataset, attributed by `r col` columns. Here's a sample:
+```{r}
+gaps %>% 
+  sample_n(10)
+```
+## Descriptive Statistics
+
+```{r, echo=FALSE}
+countName <- length(unique(gaps$name))
+  
+countIso3 <- length(unique(gaps$iso3))
+
+countIso2 <- length(unique(gaps$iso2))
+```
+There are `r countIso3` 3-letter country name abbreviations, `r countName` unique country names, and `r countIso2` 2-letter country name abbreviations.
+
+What's going on here? If there are fewer than 250 ISO2 abbreviations, that means that some are used multiple times. 
+```{r}
+gaps %>% 
+  group_by(iso2) %>% 
+  summarize(num = n_distinct(name)) %>% 
+  arrange(desc(num)) %>% 
+  head(3)
+```
+What about for the ISO3 abbreviations? Do any countries use multiple codes?
+```{r}
+gaps %>% 
+  group_by(name) %>% 
+  summarize(abbNum = n_distinct(iso3)) %>% 
+  arrange(desc(abbNum)) %>% 
+  head(3)
+```
+What are the most and least recent years in the data?
+```{r}
+max(gaps$time, na.rm = TRUE)
+
+min(gaps$time, na.rm = TRUE)
+```
+
+## CO2 Emissions
+
+How many missing CO2 emissions are there per year? Which years have the most missing?
+
+```{r}
+gaps %>% 
+  group_by(gaps$time) %>% 
+  filter(is.na(co2) | is.na(co2_PC)) %>% 
+  count() %>% 
+  arrange(desc(n)) %>% 
+  head(3)
+```
+What are the total CO2 emissions over time for the U.S., China, and India, plus additional countries?
+```{r}
+gaps %>% 
+  filter(iso3 == c("USA", "IND", "CHN", "DNK", "COL", "EGY")) %>% 
+  ggplot() + 
+  geom_line(aes(x = time, y = co2)) + 
+  geom_point(aes(x = time, y = co2))
+```
+
+Does this change when viewing CO2 emmittance on a *per capita* basis?
+```{r}
+gaps %>% 
+  filter(iso3 == c("USA", "IND", "CHN", "DNK", "COL", "EGY")) %>% 
+  ggplot() + 
+  geom_line(aes(x = time, y = co2_PC)) + 
+  geom_point(aes(x = time, y = co2_PC))
+```
