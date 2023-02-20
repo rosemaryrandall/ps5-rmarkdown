@@ -1,25 +1,27 @@
 ---
-title: "ps5-assignment"
+title: "PS5: RMarkdown Manipulations"
 author: "Rosemary Randall"
 date: "`r Sys.Date()`"
 output: html_document
 ---
 ## Loading and checking the data
-```{r echo=FALSE}
+1.2: Load the data and determine its dimensions: 
+```{r, warning=FALSE}
 library("tidyverse")
 gaps <- read_delim("gapminder.csv.bz2")
 
 row <- nrow(gaps)
 col <- ncol(gaps)
 ```
-There are `r row` rows in this dataset, attributed by `r col` columns. Here's a sample:
-```{r}
+There are `r row` rows in this dataset, attributed by `r col` columns. (1.3) Here's a sample:
+```{r, warning=FALSE}
 gaps %>% 
   sample_n(10)
 ```
 ## Descriptive Statistics
 
-```{r, echo=FALSE}
+2.1: How many countries are there, by each identifying metric?
+```{r, warning=FALSE}
 countName <- length(unique(gaps$name))
   
 countIso3 <- length(unique(gaps$iso3))
@@ -28,71 +30,81 @@ countIso2 <- length(unique(gaps$iso2))
 ```
 There are `r countIso3` 3-letter country name abbreviations, `r countName` unique country names, and `r countIso2` 2-letter country name abbreviations.
 
-What's going on here? If there are fewer than 250 ISO2 abbreviations, that means that some are used multiple times. 
-```{r}
+2.2a: What's going on here? If there are fewer than 250 ISO2 abbreviations, that means that some are used multiple times. 
+```{r, warning=FALSE}
 gaps %>% 
   group_by(iso2) %>% 
   summarize(num = n_distinct(name)) %>% 
   arrange(desc(num)) %>% 
   head(3)
 ```
-What about for the ISO3 abbreviations? Do any countries use multiple codes?
-```{r}
+This shows that "NA" is being used twice for an ISO2 abbreviation, resulting in the lower number.
+
+2.2b: What about for the ISO3 abbreviations? Do any countries use multiple codes?
+```{r, warning=FALSE}
 gaps %>% 
   group_by(name) %>% 
   summarize(abbNum = n_distinct(iso3)) %>% 
   arrange(desc(abbNum)) %>% 
   head(3)
 ```
-What are the most and least recent years in the data?
-```{r}
+This shows that countries with the name "NA" are given 4 different ISO3 abbreviations, resulting in the higher number.
+
+2.3: What are the most and least recent years in the data?
+```{r, warning=FALSE}
 max(gaps$time, na.rm = TRUE)
 
 min(gaps$time, na.rm = TRUE)
 ```
+The earliest data was collected was 1960, while the latest was 2019.
 
 ## CO2 Emissions
 
-How many missing CO2 emissions are there per year? Which years have the most missing?
-
-```{r}
+3.1: How many missing CO2 emissions are there per year? Which years have the most missing?
+```{r, warning=FALSE}
 gaps %>% 
   group_by(gaps$time) %>% 
   filter(is.na(co2) | is.na(co2_PC)) %>% 
   count() %>% 
   arrange(desc(n)) %>% 
-  head(3)
+  head(5)
 ```
-What are the total CO2 emissions over time for the U.S., China, and India, plus additional countries?
-```{r}
+Evidently, more recent years have the most missing data for carbon emissions. This might be due to bureaucratic delays or ongoing political machinations - either way, it takes time to report this information!
+
+3.2: What are the total CO2 emissions over time for the U.S., China, and India, plus additional countries?
+```{r, warning=FALSE}
 gaps %>% 
   filter(iso3 == c("USA", "IND", "CHN", "DNK", "COL", "EGY")) %>% 
   ggplot() + 
   geom_line(aes(x = time, y = co2, col = iso3)) + 
-  geom_point(aes(x = time, y = co2, col = iso3))
+  geom_point(aes(x = time, y = co2, col = iso3)) +
+  labs(x = "Time (years)", y = "CO2 Output per capita", title = "CO2 Output over Time")
 ```
 
-Does this change when viewing CO2 emmittance on a *per capita* basis?
-```{r}
+3.3: Does this change when viewing CO2 emmittance on a *per capita* basis?
+```{r, warning=FALSE}
 gaps %>% 
   filter(iso3 == c("USA", "IND", "CHN", "DNK", "COL", "EGY")) %>% 
   ggplot() + 
   geom_line(aes(x = time, y = co2_PC, col = iso3)) + 
-  geom_point(aes(x = time, y = co2_PC, col = iso3))
+  geom_point(aes(x = time, y = co2_PC, col = iso3)) +
+  labs(x = "Time (years)", y = "CO2 Output per capita", title = "Per Capita CO2 Output over Time")
 ```
-What is the average CO2 emission *per capita* for each of the regions?
-```{r}
+
+3.4: What is the average CO2 emission *per capita* for each of the regions?
+```{r, warning=FALSE}
 gaps %>% 
   filter(!is.na(region), !is.na(name)) %>% 
   group_by(region, time) %>%
   summarize(meanEmit = mean(co2_PC, na.rm = TRUE)) %>% 
   filter(time == 1960 | time == 2016) %>% 
+  arrange(desc(time)) %>% 
   arrange(desc(meanEmit))
 ```
 This shows that the Americas in the 1960s had the highest *per capita* CO2 emissions, while in 2016 Europe has the highest.
 
-Here is a graph illustrating these results:
-```{r, echo = FALSE}
+3.5: Here is a graph illustrating these results:
+```{r, warning=FALSE}
 avgs <- gaps %>% 
   group_by(region, time) %>%
   filter(!is.na(region), !is.na(name)) %>% 
@@ -101,46 +113,115 @@ avgs <- gaps %>%
   arrange(desc(meanEmit))
   
   ggplot(data = avgs) +
-  geom_bar(aes(x = region, y = meanEmit, fill = factor(time)), stat = "identity", position = "dodge")
+  geom_bar(aes(x = region, y = meanEmit, fill = factor(time)), stat = "identity", position = "dodge") +
+  labs(x = "Region", y = "Average CO2 Emittance", title = "Average CO2 Output per Continent across 1960 and 2019")
 ```
-The three largest and smallest emitters per region are as follows:
-```{r}
+
+3.6: The three largest and smallest emitters per region are as follows: ************************************************************************************************************************
+```{r, warning=FALSE}
 gaps %>% 
-  filter(!is.na(region), time == 2016) %>% 
-  group_by(region)
+  filter(time == 2019, !is.na(co2_PC)) %>% 
+  mutate(rank = rank(desc(co2_PC))) %>% 
+  filter(rank(rank) <= 3 | rank(desc(rank)) <=3) %>% 
+  summarize(iso3, name, region, co2_PC, rank) %>% 
+  arrange(co2_PC)
 ```
-I used 2016 instead of the requested 2019 because there were too many countries with no emissions data available for 2019, rendering the analysis skewed.
 
 ## GDP Per Capita
 
-```{r}
+4.1: Make a scatterplot of GDP per capita versus life expectancy by country, using data for 1960. Make the point size dependent on the country size, and color those according to the continent. Feel free to adjust the plot in other ways to make it better.
+```{r, warning=FALSE}
 LE1960 <- gaps %>% 
   filter(time == 1960)
 ggplot(data = LE1960) +
   geom_point(aes(x = GDP_PC, y = lifeExpectancy, color = region,
-                 size = totalPopulation))
+                 size = totalPopulation)) +
+  labs(x = "GDP per capita", y = "Life Expectancy (years)", title = "Comparing Life Expectancy to GDP per capita in 1960")
 ```
-This shows a positive corelation between *per capita* GDP (a measure of national wealth) and *per capita* life expectancy - which makes sense, given that wealthier countries are more likely to have more robust healthcare and education systems. [WHAT DOES REGION PLAY INTO HERE]
-```{r}
+This shows a positive corelation between *per capita* GDP (a measure of national wealth) and *per capita* life expectancy - which makes sense, given that wealthier countries are more likely to have more robust healthcare and education systems.
+
+4.2: Make the same graph, but with 2019 data.
+```{r, warning=FALSE}
 LE2019 <- gaps %>% 
   filter(time == 2019)
 ggplot(data = LE2019) +
   geom_point(aes(x = GDP_PC, y = lifeExpectancy, color = region,
-                 size = totalPopulation))
+                 size = totalPopulation)) +
+  labs(x = "GDP per capita", y = "Life Expectancy (years)", title = "Comparing Life Expectancy to GDP per capita in 2019")
 ```
-The differences between these two charts shows a general increase for the regions towards higher GDP and higher life expectancy, which is to be expected with the prior sixty years of increased globalization and industrialization, both of which tend to increase wealth and drives education and technology to be better via international scientific collaboration.
 
-What is the average life expectancy overall for each continent between 1960 and 2019? Does that align with the figures?
-```{r}
+4.3: The differences between these two charts shows a general increase for the regions towards higher GDP and higher life expectancy, which is to be expected with the prior sixty years of increased globalization and industrialization, both of which tend to increase wealth and drives education and technology to be better via international scientific collaboration.
+
+4.4: What is the average life expectancy overall for each continent between 1960 and 2019? Does that align with the figures?
+```{r, warning=FALSE}
 gaps %>% 
-  filter(time == 2019, !is.na(lifeExpectancy)) %>% 
+  filter(time == 2019, !is.na(lifeExpectancy), !is.na(region)) %>% 
   group_by(region) %>% 
   summarize(meanLE = mean(lifeExpectancy))
 
 gaps %>% 
-  filter(time == 1960, !is.na(lifeExpectancy)) %>% 
+  filter(time == 1960, !is.na(lifeExpectancy), !is.na(region)) %>% 
   group_by(region) %>% 
   summarize(meanLE = mean(lifeExpectancy))
 ```
 This matches the overall increase in both life expectancy and per capita GDP in all regions in accordance with progress into a more modern era on all fronts. 
 
+4.5: Find Average LE growth from 1960 to 2019 across the continents in order of growth.*******************************************************************************************
+```{r, warning=FALSE}
+gaps %>% 
+  filter(time == 1960, time == 2019, !is.na(lifeExpectancy)) %>% 
+  group_by(region) %>% 
+  mutate(prev = lag(lifeExpectancy)) %>% 
+  mutate(growth = lifeExpectancy - prev) %>% 
+  summarize(region, prev, growth)
+```
+
+4.6: Make a histogram of GDP *per capita* for the years 1960 and 2019 on the same graph.
+```{r, warning=FALSE}
+gdps <- gaps %>% 
+  group_by(time) %>% 
+  filter(!is.na(GDP_PC), !is.na(name)) %>% 
+  filter(time == 1960 | time == 2019)
+
+  ggplot(data = gdps) +
+    geom_histogram(aes(x = GDP_PC, fill = factor(time)),
+                   position = "dodge", bins = 30) +
+     scale_fill_manual(values = c("purple", "yellow"), labels = c("1960", "2019")) +
+    labs(x = "GDP per capita", y = "Count", title = "GDP per capita from 1960 to 2019")
+```
+
+4.7: What was the ranking of the US in terms of life expectancy in 1960 compared to 2019 (when counting from the top?)
+```{r, warning=FALSE}
+gaps %>% 
+  filter(time == 1960, !is.na(name)) %>% 
+  mutate(rank = rank(desc(lifeExpectancy))) %>% 
+  summarize(iso3, name, lifeExpectancy, rank) %>% 
+  filter(iso3 == "USA")
+
+gaps %>% 
+  filter(time == 2019, !is.na(name)) %>% 
+  mutate(rank = rank(desc(lifeExpectancy))) %>% 
+  summarize(iso3, name, lifeExpectancy, rank) %>% 
+  filter(iso3 == "USA")
+```
+We notice that the US's ranking in terms of life expectancy has dropped significantly in the years between 1960 and 2019. However, given that we also see an almost 10-year jump in life expectancy for the US, it's more reasonable to assume that other countries are attaining higher life expectancies than the US's is getting worse.
+
+4.8: Given the US's falling ranking, but also the increased number of countries in 2019 as compared to 1960, what is the relative rank divided by the corresponding number of countries in the given year? (rank/number of countries)
+```{r, warning=FALSE}
+gaps %>% 
+  filter(time == 1960, !is.na(name)) %>% 
+  mutate(rank = rank(desc(lifeExpectancy))) %>% 
+  mutate(relRank = rank/n_distinct(name)) %>% 
+  summarize(iso3, name, lifeExpectancy, rank, relRank) %>% 
+  filter(iso3 == "USA")
+
+gaps %>% 
+  filter(time == 2019, !is.na(name)) %>% 
+  mutate(rank = rank(desc(lifeExpectancy))) %>%
+  mutate(relRank = rank/n_distinct(name)) %>% 
+  summarize(iso3, name, lifeExpectancy, rank, relRank) %>% 
+  filter(iso3 == "USA")
+```
+This result makes sense - the US's relative rank goes up even if its "actual" rank doesn't, because at the end of the day it is still a highly prosperous nation and generally an outlier when compared to other countries. By normalizing the data in this way, a more realistic picture is painted.
+
+Bonus: I spent somewhere in the ballpark of 10 hours on this problemset across 3 days. 
