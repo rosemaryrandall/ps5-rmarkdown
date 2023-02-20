@@ -68,8 +68,8 @@ What are the total CO2 emissions over time for the U.S., China, and India, plus 
 gaps %>% 
   filter(iso3 == c("USA", "IND", "CHN", "DNK", "COL", "EGY")) %>% 
   ggplot() + 
-  geom_line(aes(x = time, y = co2)) + 
-  geom_point(aes(x = time, y = co2))
+  geom_line(aes(x = time, y = co2, col = iso3)) + 
+  geom_point(aes(x = time, y = co2, col = iso3))
 ```
 
 Does this change when viewing CO2 emmittance on a *per capita* basis?
@@ -77,6 +77,70 @@ Does this change when viewing CO2 emmittance on a *per capita* basis?
 gaps %>% 
   filter(iso3 == c("USA", "IND", "CHN", "DNK", "COL", "EGY")) %>% 
   ggplot() + 
-  geom_line(aes(x = time, y = co2_PC)) + 
-  geom_point(aes(x = time, y = co2_PC))
+  geom_line(aes(x = time, y = co2_PC, col = iso3)) + 
+  geom_point(aes(x = time, y = co2_PC, col = iso3))
 ```
+What is the average CO2 emission *per capita* for each of the regions?
+```{r}
+gaps %>% 
+  filter(!is.na(region), !is.na(name)) %>% 
+  group_by(region, time) %>%
+  summarize(meanEmit = mean(co2_PC, na.rm = TRUE)) %>% 
+  filter(time == 1960 | time == 2016) %>% 
+  arrange(desc(meanEmit))
+```
+This shows that the Americas in the 1960s had the highest *per capita* CO2 emissions, while in 2016 Europe has the highest.
+
+Here is a graph illustrating these results:
+```{r, echo = FALSE}
+avgs <- gaps %>% 
+  group_by(region, time) %>%
+  filter(!is.na(region), !is.na(name)) %>% 
+  summarize(meanEmit = mean(co2_PC, na.rm = TRUE)) %>% 
+  filter(time == 1960 | time == 2016) %>% 
+  arrange(desc(meanEmit))
+  
+  ggplot(data = avgs) +
+  geom_bar(aes(x = region, y = meanEmit, fill = factor(time)), stat = "identity", position = "dodge")
+```
+The three largest and smallest emitters per region are as follows:
+```{r}
+gaps %>% 
+  filter(!is.na(region), time == 2016) %>% 
+  group_by(region)
+```
+I used 2016 instead of the requested 2019 because there were too many countries with no emissions data available for 2019, rendering the analysis skewed.
+
+## GDP Per Capita
+
+```{r}
+LE1960 <- gaps %>% 
+  filter(time == 1960)
+ggplot(data = LE1960) +
+  geom_point(aes(x = GDP_PC, y = lifeExpectancy, color = region,
+                 size = totalPopulation))
+```
+This shows a positive corelation between *per capita* GDP (a measure of national wealth) and *per capita* life expectancy - which makes sense, given that wealthier countries are more likely to have more robust healthcare and education systems. [WHAT DOES REGION PLAY INTO HERE]
+```{r}
+LE2019 <- gaps %>% 
+  filter(time == 2019)
+ggplot(data = LE2019) +
+  geom_point(aes(x = GDP_PC, y = lifeExpectancy, color = region,
+                 size = totalPopulation))
+```
+The differences between these two charts shows a general increase for the regions towards higher GDP and higher life expectancy, which is to be expected with the prior sixty years of increased globalization and industrialization, both of which tend to increase wealth and drives education and technology to be better via international scientific collaboration.
+
+What is the average life expectancy overall for each continent between 1960 and 2019? Does that align with the figures?
+```{r}
+gaps %>% 
+  filter(time == 2019, !is.na(lifeExpectancy)) %>% 
+  group_by(region) %>% 
+  summarize(meanLE = mean(lifeExpectancy))
+
+gaps %>% 
+  filter(time == 1960, !is.na(lifeExpectancy)) %>% 
+  group_by(region) %>% 
+  summarize(meanLE = mean(lifeExpectancy))
+```
+This matches the overall increase in both life expectancy and per capita GDP in all regions in accordance with progress into a more modern era on all fronts. 
+
