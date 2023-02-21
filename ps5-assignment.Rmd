@@ -80,6 +80,7 @@ gaps %>%
   geom_point(aes(x = time, y = co2, col = iso3)) +
   labs(x = "Time (years)", y = "CO2 Output per capita", title = "CO2 Output over Time")
 ```
+Somewhat unsurprisingly, China and India's CO2 emissions begin increasing around 2000 when a boom in technology production began as well as a population spike in both countries, resulting in increased emissions, while the US has remained on a semi-steady increase until that point as well, when it began to decrease. Most of the other countries remained relatively small, either due to size or increase in sustainable energy.
 
 3.3: Does this change when viewing CO2 emmittance on a *per capita* basis?
 ```{r, warning=FALSE}
@@ -90,6 +91,7 @@ gaps %>%
   geom_point(aes(x = time, y = co2_PC, col = iso3)) +
   labs(x = "Time (years)", y = "CO2 Output per capita", title = "Per Capita CO2 Output over Time")
 ```
+The trends from the previous graph often hold the same, with most increasing around 2000. However, curious is Denmark's trend, which starts higher than one might expect from a small nation - but given that this data is *per capita* that might indicate some of that variance.
 
 3.4: What is the average CO2 emission *per capita* for each of the regions?
 ```{r, warning=FALSE}
@@ -116,16 +118,25 @@ avgs <- gaps %>%
   geom_bar(aes(x = region, y = meanEmit, fill = factor(time)), stat = "identity", position = "dodge") +
   labs(x = "Region", y = "Average CO2 Emittance", title = "Average CO2 Output per Continent across 1960 and 2019")
 ```
+Over time, almost all regions have increased their average CO2 emissions - except notably the Americas, which is strange considering the great increase in population across the Americas. However, the results for each year independently make sense - in the 1900s, the Americas were a hub of industrialization and construction, both of which released plenty of carbon dioxide, while in 2019 a significant portion of high-emitting industries like fuel production and technology have moved to Asia and Europe.
 
-3.6: The three largest and smallest emitters per region are as follows: ************************************************************************************************************************
+3.6: The three largest and smallest emitters per region are as follows: 
 ```{r, warning=FALSE}
 gaps %>% 
-  filter(time == 2019, !is.na(co2_PC)) %>% 
-  mutate(rank = rank(desc(co2_PC))) %>% 
-  filter(rank(rank) <= 3 | rank(desc(rank)) <=3) %>% 
-  summarize(iso3, name, region, co2_PC, rank) %>% 
-  arrange(co2_PC)
+  filter(time == 2016, !is.na(co2_PC)) %>% 
+  group_by(region) %>% 
+  arrange(co2_PC) %>% 
+  slice_head(n = 3) %>% 
+  select(region, name, co2_PC)
+
+gaps %>% 
+  filter(time == 2016, !is.na(co2_PC)) %>% 
+  group_by(region) %>% 
+  arrange(co2_PC) %>% 
+  slice_tail(n = 3) %>% 
+  select(region, name, co2_PC)
 ```
+There's relatively dramatic turnover in the highest emitters across 60 years, likely due to increased emissions on a global scale as a byproduct of increasing population size and requisite reliance on nonsustainable fuels which increase emissions for the most populated nations (as seen by the US not being one of the most emitters *per capita* in 1960 but up there in 2019.)
 
 ## GDP Per Capita
 
@@ -166,15 +177,27 @@ gaps %>%
 ```
 This matches the overall increase in both life expectancy and per capita GDP in all regions in accordance with progress into a more modern era on all fronts. 
 
-4.5: Find Average LE growth from 1960 to 2019 across the continents in order of growth.*******************************************************************************************
+4.5: Find Average LE growth from 1960 to 2019 across the continents in order of growth.
 ```{r, warning=FALSE}
 gaps %>% 
-  filter(time == 1960, time == 2019, !is.na(lifeExpectancy)) %>% 
   group_by(region) %>% 
-  mutate(prev = lag(lifeExpectancy)) %>% 
-  mutate(growth = lifeExpectancy - prev) %>% 
-  summarize(region, prev, growth)
+  group_by(time) %>% 
+  filter(!is.na(lifeExpectancy), !is.na(region)) %>% 
+  mutate(prev = lag(lifeExpectancy), 
+         growth = lifeExpectancy - prev) %>% 
+  mutate(meanGrowth = mean(growth), na.rm = TRUE) %>% 
+  select(iso3, name, region, time, lifeExpectancy, prev, growth, meanGrowth) %>% 
+  arrange(desc(growth))
+
+gaps %>% 
+  group_by(region, time) %>% 
+  filter(!is.na(lifeExpectancy), !is.na(region), time == 1960 | time == 2019) %>% 
+  summarise(avgLEgrowth = mean(lifeExpectancy)) %>% 
+  mutate(prev = lag(avgLEgrowth), growth = avgLEgrowth - prev) %>% 
+  filter(!is.na(growth)) %>% 
+  arrange(desc(growth))
 ```
+These results indicate that Asia experienced the highest average growth in life expectancy, likely due to both rapidly increasing population and great increases in globalization, technology, and rises in social capital in places like South Korea and China, as well as recovery from drastic population life expectancy decreasing events (such as the rise and fall of the Pol Pot Regime in Cambodia which skews the data downward.)
 
 4.6: Make a histogram of GDP *per capita* for the years 1960 and 2019 on the same graph.
 ```{r, warning=FALSE}
@@ -189,6 +212,7 @@ gdps <- gaps %>%
      scale_fill_manual(values = c("purple", "yellow"), labels = c("1960", "2019")) +
     labs(x = "GDP per capita", y = "Count", title = "GDP per capita from 1960 to 2019")
 ```
+This figure shows a much greater number of lower-GDP nations in both years, but a relatively large increase in GDP across the total nations (ignoring size) as time progresses, with many nations achieving a much higher GDP than the highest possible in 1960. Overall this indicates a growth in international wealth.
 
 4.7: What was the ranking of the US in terms of life expectancy in 1960 compared to 2019 (when counting from the top?)
 ```{r, warning=FALSE}
